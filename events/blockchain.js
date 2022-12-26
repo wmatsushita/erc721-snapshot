@@ -56,11 +56,11 @@ const tryGetEvents = async (start, end, symbol) => {
 module.exports.get = async () => {
   const name = await Contract.methods.name().call();
   const symbol = await Contract.methods.symbol().call();
-  const blockHeight = await web3.eth.getBlockNumber();
+  const lastBlock = await web3.eth.getBlockNumber();
   var fromBlock = parseInt(Config.fromBlock) || 0;
   const blocksPerBatch = parseInt(Config.blocksPerBatch) || 0;
   const delay = parseInt(Config.delay) || 0;
-  const toBlock = blockHeight;
+  const toBlock = parseInt(Config.toBlock) || lastBlock;
 
   const lastDownloadedBlock = await LastDownloadedBlock.get(symbol);
 
@@ -75,7 +75,7 @@ module.exports.get = async () => {
   let end = fromBlock + blocksPerBatch;
   let i = 0;
 
-  while (end < toBlock) {
+  while (end < lastBlock) {
     i++;
 
     if (delay) {
@@ -89,12 +89,12 @@ module.exports.get = async () => {
     start = end + 1;
     end = start + blocksPerBatch;
 
-    if (end > toBlock) {
-      end = toBlock;
+    if (end > lastBlock) {
+      end = lastBlock;
     }
   }
 
-  const events = await BlockReader.getEvents(symbol);
+  const events = BlockReader.getEvents(symbol, toBlock);
 
   const data = {
     name,

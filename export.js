@@ -6,20 +6,28 @@ const WalletType = require("./wallet-type");
 
 const objectToCsv = require("csv-writer").createObjectCsvWriter;
 
-module.exports.exportBalances = async (symbol, balances, format) => {
-  const withType = await WalletType.addType(balances);
+const prepareForCsv = (balances) =>
+  balances.flatMap((balance) =>
+    balance.tokenIds.flatMap((tokenId) => {
+      return { wallet: balance.wallet, tokenId: tokenId };
+    })
+  );
 
+module.exports.exportBalances = async (symbol, balances, format) => {
   const writeCsv = () => {
     const file = Parameters.outputFileNameCSV.replace(/{token}/g, symbol);
     FileHelper.ensureDirectory(path.dirname(file));
 
     const writer = objectToCsv({
       path: file,
-      header: [{ id: "wallet", title: "Wallet" }, { id: "balance", title: "Balance" }, { id: "type", title: "Type" }]
+      header: [
+        { id: "wallet", title: "Wallet" },
+        { id: "tokenId", title: "Token ID" }
+      ]
     });
 
     console.log("Exporting CSV");
-    writer.writeRecords(withType).then(() => console.log("CSV export done!"));
+    writer.writeRecords(prepareForCsv(balances)).then(() => console.log("CSV export done!"));
   };
 
   if (["csv", "both"].indexOf(format.toLowerCase()) > -1) {
@@ -31,6 +39,6 @@ module.exports.exportBalances = async (symbol, balances, format) => {
   }
 
   console.log("Exporting JSON");
-  await FileHelper.writeFile(Parameters.outputFileNameJSON.replace(/{token}/g, symbol), withType);
+  await FileHelper.writeFile(Parameters.outputFileNameJSON.replace(/{token}/g, symbol), balances);
   console.log("JSON export done!");
 };

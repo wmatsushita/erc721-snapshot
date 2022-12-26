@@ -7,11 +7,8 @@ const { promisify } = require("util");
 
 const Parameters = require("../parameters").get();
 
-const readdirAsync = promisify(fs.readdir);
-const readFileAsync = promisify(fs.readFile);
-
-const getMinimal = pastEvents => {
-  return pastEvents.map(tx => {
+const getMinimal = (pastEvents) => {
+  return pastEvents.map((tx) => {
     return {
       transactionHash: tx.transactionHash,
       from: tx.returnValues["0"],
@@ -21,20 +18,23 @@ const getMinimal = pastEvents => {
   });
 };
 
-module.exports.getEvents = async symbol => {
+module.exports.getEvents = (symbol, toBlock) => {
   const directory = Parameters.eventsDownloadFolder.replace(/{token}/g, symbol);
-  var files = await readdirAsync(directory);
-  files.sort((a,b) => {
+  var files = fs.readdirSync(directory);
+  files.sort((a, b) => {
     return parseInt(a.split(".")[0]) - parseInt(b.split(".")[0]);
   });
   let events = [];
 
   console.log("Parsing files.");
 
-  for await (const file of files) {
+  for (const file of files) {
+    if (parseInt(file.split(".")[0]) > toBlock) {
+      break;
+    }
     console.log("Parsing ", file);
 
-    const contents = await readFileAsync(path.join(directory, file));
+    const contents = fs.readFileSync(path.join(directory, file));
     const parsed = JSON.parse(contents.toString());
     events = events.concat(getMinimal(parsed));
   }
